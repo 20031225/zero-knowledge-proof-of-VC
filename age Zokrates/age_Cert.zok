@@ -24,15 +24,23 @@ import "utils/casts/field_to_u32" as field_to_u32
 
 
 def testOwnershipTrue(private field sk, public field[2] pk) -> bool:
+	//************************************
+        //obtaining generator G
+        //**************************************
 	BabyJubJubParams context = context()
 	field[2] G = [context.Gu, context.Gv]
 
+	//************************************
+        //user_sk*G ?= user_pk
+        //**************************************
 	bool out = proofOfOwnership(pk, sk, context)
 
 	assert(out)
 	return true
 
-
+//************************************
+//converting bool[N] into u64[P]
+//**************************************
     def bool_to_u64_arr<N, P>(bool[N] bits) -> u64[P]:
 	u64[P] res = [0; P]
 	for u32 i in 0..P do
@@ -45,45 +53,88 @@ def testOwnershipTrue(private field sk, public field[2] pk) -> bool:
     
 def main(private field user_age,private field user_sk, private field[2] user_pk, private field[2] user_true_DID, private field[2] delta,   public field[2] user_fake_DID,public field[2] IDP_DID,public field[2] Sign_H)->field:
 
+//#################################################################################################
+// The variables are explained in the following:
+//(1) Invisible privacy variables： 
+//user_age: User's identity attribute contained in the verifiable certificate (VC)
+//user_sk: User's private key and it is from Eddsa algorithm of elliptic curve
+//user_pk: User's public key and user_pk=user_sk*G
+//user_true_DID: User's identity identifier contained in VC and user_true_DID=keccak256(user_pk)
+//delta: A random number used to hide user_true_DID
+
+//(2) Visible public variables：
+//user_fake_DID: Fake identity identifier and user_fake_DID=(user_true_DID || delta)
+//IDP_DID: Identity identifier of identity provider (IDP) contained in VC
+//Sign_H: Hash value of VC and Sign_H = (user_age || user_true_DID || IDP_DID) 
+//#################################################################################################
+
+
+//************************************
+//user_sk*G ?= user_pk
+//**************************************
 assert(testOwnershipTrue(user_sk,user_pk))
-	
+
+
+//************************************
+//converting field into bool[256]
+//**************************************
 bool[254] pk0_t=unpack::<254>(user_pk[0])
 bool[256] pk0=[false,false,...pk0_t]
 bool[254] pk1_t=unpack::<254>(user_pk[1])
 bool[256] pk1=[false,false,...pk1_t]
 
 
-
+//************************************
+//converting bool[256] into u64[8]
+//**************************************
 u64[4] pk0_u64 = bool_to_u64_arr::<256,4>(pk0)
 u64[4] pk1_u64 = bool_to_u64_arr::<256,4>(pk1)
 
 u64[8] pk = [pk1_u64[0],pk1_u64[1],pk1_u64[2],pk1_u64[3],pk0_u64[0],pk0_u64[1],pk0_u64[2],pk0_u64[3]]
 
+
+//************************************
+//*******keccak256(user_pk)*********
+//**************************************
 u64[4] user_DID=keccak256::<8>(pk)
 
 
+//************************************
+//converting field into u64[4]
+//**************************************
 bool[128] user_true_DID_t=unpack::<128>(user_true_DID[0])
 bool[128] user_true_DID_t1=unpack::<128>(user_true_DID[1])
 bool[256] user_true_DID_t2=[...user_true_DID_t,...user_true_DID_t1]
 u64[4] user_true_DID_u64 = bool_to_u64_arr::<256,4>(user_true_DID_t2)
 
 
+//*******************************************
+//user_true_DID ?= keccak256(user_pk)
+//*******************************************
 assert(user_true_DID_u64==user_DID)
 
 
-
+//************************************
+//converting field into u64[4]
+//**************************************
 bool[128] delta_t=unpack::<128>(delta[0])
 bool[128] delta_t1=unpack::<128>(delta[1])
 bool[256] delta_t2=[...delta_t,...delta_t1]
 u64[4] delta_u64 = bool_to_u64_arr::<256,4>(delta_t2)
 
-
+//************************************
+//user_true_DID || delta
+//**************************************
 u64[8] user_DID_delta=[user_true_DID_u64[0],user_true_DID_u64[1],user_true_DID_u64[2],user_true_DID_u64[3],delta_u64[0],delta_u64[1],delta_u64[2],delta_u64[3]]   // pk
 
-
+//************************************
+//keccak256(user_true_DID || delta)
+//**************************************
 u64[4] user_DID_delta_1P=keccak256::<8>(user_DID_delta)   
 
-
+//************************************
+//converting field into u64[4]
+//************************************
 bool[128] user_fake_DID_t=unpack::<128>(user_fake_DID[0])
 bool[128] user_fake_DID_t1=unpack::<128>(user_fake_DID[1])
 bool[256] user_fake_DID_t2=[...user_fake_DID_t,...user_fake_DID_t1]
@@ -92,11 +143,15 @@ u64[4] user_fake_DID_u64 = bool_to_u64_arr::<256,4>(user_fake_DID_t2)
 
 //u32[8] user_new_DID_u32 = bool_256_to_u32_8(user_new_DID_t2)
 
-
+//************************************
+//user_fake_DID  ?=  keccak256(user_true_DID || delta)
+//**************************************
 assert(user_DID_delta_1P==user_fake_DID_u64)
 
 /**/
-
+//************************************
+//converting field into u64[4]
+//**************************************
 bool[128] IDP_DID_t=unpack::<128>(IDP_DID[0])
 bool[128] IDP_DID_t1=unpack::<128>(IDP_DID[1])
 bool[256] IDP_DID_t2=[...IDP_DID_t,...IDP_DID_t1]
@@ -109,34 +164,52 @@ u64[4] IDP_DID_u64 = bool_to_u64_arr::<256,4>(IDP_DID_t2)
 //assert(IDP_DID_1P==IDP_DID_u64)
 
 
-
+//************************************
+//converting field into bool
+//**************************************
 bool[64] user_age_t=unpack::<64>(user_age)
+
+//************************************
+//converting bool into u64[1]
+//**************************************
 u64[1] user_age_u64 = bool_to_u64_arr::<64,1>(user_age_t)
 
 
-
+//************************************
+// (user_age || user_true_DID || IDP_DID)
+//**************************************
 u64[9] Sign_H_temp_u64=[user_age_u64[0],user_true_DID_u64[0],user_true_DID_u64[1],user_true_DID_u64[2],user_true_DID_u64[3],IDP_DID_u64[0],IDP_DID_u64[1],IDP_DID_u64[2],IDP_DID_u64[3]]
 
 
-
+//************************************************
+// keccak256(user_age || user_true_DID || IDP_DID)
+//************************************************
 u64[4] Sign_H_temp=keccak256::<9>(Sign_H_temp_u64)
 
 
-
+//************************************
+//converting field into u64[4]
+//**************************************
 bool[128] Sign_H_t=unpack::<128>(Sign_H[0])
 bool[128] Sign_H_t1=unpack::<128>(Sign_H[1])
 bool[256] Sign_H_t2=[...Sign_H_t,...Sign_H_t1]
 u64[4] Sign_H_u64 = bool_to_u64_arr::<256,4>(Sign_H_t2)
 
-
+//***********************************************************
+// Sign_H ?= keccak256(user_age || user_true_DID || IDP_DID)
+//***********************************************************
 assert(Sign_H_temp==Sign_H_u64)
 
 
-
+//***********************************************************
+// Identity attribute requirement of service authorization
+//***********************************************************
 field valid_age_max=60
 field valid_age_min=18
 
-
+//*******************************************************************************************************
+// whether user_age is within the range of identity attribute requirement of service authorization
+//*******************************************************************************************************
 assert(user_age>valid_age_min && user_age<valid_age_max)
 
 
