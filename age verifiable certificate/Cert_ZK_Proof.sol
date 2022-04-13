@@ -542,7 +542,9 @@ library Pairing {
 }
 
 
-
+ //###################################################################################
+ //import the smart contract, Cert_IsUsed_SC.sol
+ //################################################################################### 
 import "Cert_IsUsed_SC.sol";
   
 contract Cert_ZK_Proof_SC {
@@ -556,17 +558,24 @@ contract Cert_ZK_Proof_SC {
         Cert_IsUsed_SC cert_isused_sc_ok;
   
 
-
+ //###################################################################################
+ //after the smart contract, Cert_IsUsed_SC.sol, is depolyed, set its address through this function
+ //################################################################################### 
     function set_cert_isused_sc_addr(address cert_isused_sc_addr)public{
         cert_isused_sc_ok=Cert_IsUsed_SC(cert_isused_sc_addr);
     }
-    
+
+ //###################################################################################
+ //determine whether pi has been used through proof_hash = keccak256(pi.public input) through this function
+ //################################################################################### 
     function read_cert_isused_sc(bytes32 proof_hash) public returns(bool){
        bool cert_isused_sc_status= cert_isused_sc_ok.read_Status(proof_hash);
        return cert_isused_sc_status;
     }
  
- 
+  //###################################################################################
+ //set that pi has been used through this function
+ //###################################################################################   
     function set_cert_isused_sc_status(bytes32 proof_hash) public{
         cert_isused_sc_ok.set_cert_isused_sc_Status(proof_hash);
     }    
@@ -578,18 +587,33 @@ contract Cert_ZK_Proof_SC {
             uint[2][2] memory b,
             uint[2] memory c, uint[7] memory input, bytes32 proof_hash
         ) public returns (bool r) {
-            
+
+ //###################################################################################
+ //in our paper, pi={a, b, c, public input (or input)} 
+ //proof_hash = keccak256(pi.public input)
+ //################################################################################### 
+
+
         Proof memory proof;
         proof.a = Pairing.G1Point(a[0], a[1]);
         proof.b = Pairing.G2Point([b[0][0], b[0][1]], [b[1][0], b[1][1]]);
         proof.c = Pairing.G1Point(c[0], c[1]);
-           
+
+ //###################################################################################
+ //determine whether pi has been used through proof_hash = keccak256(pi.public input)
+ //################################################################################### 
            bool cert_isUsed=read_cert_isused_sc(proof_hash);
            require(cert_isUsed!=true,"Cert has been used");
            
+ //###################################################################################
+ //if pi still don't be used, determine whether pi is valid
+ //###################################################################################            
            bool hold_prdid=verifyTx(proof,input);
            require(hold_prdid==true,"user identity is valid");
            
+  //###################################################################################
+ //if pi is valid, set that pi has been used
+ //###################################################################################          
          set_cert_isused_sc_status(proof_hash);
            
            return true;
@@ -612,6 +636,10 @@ contract Cert_ZK_Proof_SC {
         Pairing.G2Point b;
         Pairing.G1Point c;
     }
+    
+ //###################################################################################
+ //Set verification key 
+ //###################################################################################    
     function verifyingKey() pure internal returns (VerifyingKey memory vk) {
         vk.alpha = Pairing.G1Point(uint256(0x2634b7f4bcd40cda6af830111c9b78981ab87aa37cb5e6ff282d64030c869970), uint256(0x0d139ce3cec619cb4b42c73e6fb2cda859276625c39545d4c0a129bab744e091));
         vk.beta = Pairing.G2Point([uint256(0x0a96f46719c25913af1334fd410117c2e7d1d7cd221b591958a04956b927fe43), uint256(0x156320b5acf54929a9927035c841f2a7a222fcb9109934bdaa1eade28d37a634)], [uint256(0x2cc2c3b67e843916cbd87c8f215426a3c4f5c541662d76957124ef5af1eb3e81), uint256(0x1e3495e5567ff281f4f9316205e9cf3dd68354874bc03f2a3cdd8e9f5e07cf5f)]);
@@ -627,6 +655,13 @@ contract Cert_ZK_Proof_SC {
         vk.gamma_abc[6] = Pairing.G1Point(uint256(0x111774671ad9763ece0cc95e582de9c01b06813a4552cc7a8ec818f1d07c7e89), uint256(0x219513c1ae3ae02c2dfe3d70ee21e6f3372f44b47bbb0fd057031adf5ac3482c));
         vk.gamma_abc[7] = Pairing.G1Point(uint256(0x1eeab246256032816acc06fd5b143b254fd06ab8bd32104417fee1bace230ef5), uint256(0x1ca8e1068aa28c5ff10ee16f194dd5023ef14dc48873f8b846e4530f073364a1));
     }
+    
+ //###################################################################################
+ //Pairing.addition() is equivalent to EIP196.addition() 
+ //Pairing.scalar_mul() is equivalent to EIP196.scalar_mul()
+ //Pairing.pairingProd4() is equivalent to EIP197.Pairing()
+ //Pairing.negate()  is equivalent to -()
+ //###################################################################################
     function verify(uint[] memory input, Proof memory proof) internal view returns (uint) {
         uint256 snark_scalar_field = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
         VerifyingKey memory vk = verifyingKey();
@@ -645,6 +680,10 @@ contract Cert_ZK_Proof_SC {
              Pairing.negate(vk.alpha), vk.beta)) return 1;
         return 0;
     }
+ 
+ //***********************************************************************
+ //Algorithm 2 described in our paper
+ //************************************************************************
     function verifyTx(
             Proof memory proof, uint[7] memory input
         ) public view returns (bool r) {
