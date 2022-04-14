@@ -40,6 +40,9 @@ contract Cert_Status_SC{
         
         }
 
+//#################################################################
+//Using this function to revoke the status of VC which has been issued
+//##################################################################  
    function  Set_Status_Revocation(bytes32 Sign_H) public {
         
         require (legal_IDP[msg.sender]==true,"Your identity is illegal");
@@ -47,7 +50,9 @@ contract Cert_Status_SC{
         
         }       
         
-       
+ //#################################################################
+//Using this function to see whether VC is active
+//##################################################################        
     function  read_Status(bytes32 Sign_H) public view returns(bool){
         
    //     require (legal_IDP[msg.sender]==true,"Your identity is illegal");
