@@ -2,6 +2,12 @@
 // This file is LGPL3 Licensed
 pragma solidity ^0.8.0;
 
+//################################################################################################################
+//This contract is used to implement the on-chain verification of pi={a, b, c, public_input}
+//submitted by user based on the equation (8) presented in our paper.
+// On the other hand, in this file, the name of smart contract is Cert_ZK_Proof_SC
+//################################################################################################################
+
 /**
  * @title Elliptic curve operations on twist points for alt_bn128
  * @author Mustafa Al-Bassam (mus@musalbas.com)
