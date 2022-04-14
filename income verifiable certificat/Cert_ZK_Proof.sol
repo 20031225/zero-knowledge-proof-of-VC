@@ -2,6 +2,13 @@
 // This file is LGPL3 Licensed
 pragma solidity ^0.8.0;
 
+//################################################################################################################
+//This contract is used to implement the on-chain verification of pi={a, b, c, public_input}
+//submitted by user based on the equation (8) presented in our paper.
+// On the other hand, in this file, the name of smart contract is Cert_ZK_Proof_SC
+//################################################################################################################
+
+
 /**
  * @title Elliptic curve operations on twist points for alt_bn128
  * @author Mustafa Al-Bassam (mus@musalbas.com)
@@ -542,8 +549,9 @@ library Pairing {
 }
 
 
-    
-    
+ //###################################################################################
+ //import the smart contract, Cert_IsUsed_SC.sol
+ //###################################################################################     
 import "Cert_IsUsed_SC.sol";
 
 
@@ -558,17 +566,24 @@ contract Cert_ZK_Proof_SC {
         Cert_IsUsed_SC cert_isused_sc_ok;
   
 
-
+ //###################################################################################
+ //after the smart contract, Cert_IsUsed_SC.sol, is depolyed, set its address through this function
+ //################################################################################### 
     function set_cert_isused_sc_addr(address cert_isused_sc_addr)public{
         cert_isused_sc_ok=Cert_IsUsed_SC(cert_isused_sc_addr);
     }
-    
+
+ //###################################################################################
+ //determine whether pi has been used through proof_hash = keccak256(pi.public input) through this function
+ //################################################################################### 
     function read_cert_isused_sc(bytes32 proof_hash) public returns(bool){
        bool cert_isused_sc_status= cert_isused_sc_ok.read_Status(proof_hash);
        return cert_isused_sc_status;
     }
  
- 
+  //###################################################################################
+ //set that pi has been used through this function
+ //################################################################################### 
     function set_cert_isused_sc_status(bytes32 proof_hash) public{
         cert_isused_sc_ok.set_cert_isused_sc_Status(proof_hash);
     }    
@@ -580,18 +595,32 @@ contract Cert_ZK_Proof_SC {
             uint[2][2] memory b,
             uint[2] memory c, uint[7] memory input, bytes32 proof_hash
         ) public returns (bool r) {
-            
+
+ //###################################################################################
+ //in our paper, pi={a, b, c, public input (or input)} 
+ //proof_hash = keccak256(pi.public input)
+ //###################################################################################
+
         Proof memory proof;
         proof.a = Pairing.G1Point(a[0], a[1]);
         proof.b = Pairing.G2Point([b[0][0], b[0][1]], [b[1][0], b[1][1]]);
         proof.c = Pairing.G1Point(c[0], c[1]);
-           
+
+ //###################################################################################
+ //determine whether pi has been used through proof_hash = keccak256(pi.public input)
+ //###################################################################################
            bool cert_isUsed=read_cert_isused_sc(proof_hash);
            require(cert_isUsed!=true,"Cert has been used");
-           
+
+ //###################################################################################
+ //if pi still don't be used, determine whether pi is valid
+ //###################################################################################
            bool hold_prdid=verifyTx(proof,input);
            require(hold_prdid==true,"user identity is valid");
-           
+
+  //###################################################################################
+ //if pi is valid, set that pi has been used
+ //################################################################################### 
            set_cert_isused_sc_status(proof_hash);
            
            return true;
@@ -618,6 +647,10 @@ contract Cert_ZK_Proof_SC {
         Pairing.G2Point b;
         Pairing.G1Point c;
     }
+    
+ //###################################################################################
+ //Set verification key 
+ //################################################################################### 
     function verifyingKey() pure internal returns (VerifyingKey memory vk) {
         vk.alpha = Pairing.G1Point(uint256(0x0ab7e5611137b0cb529286af2b15776851bc52f5531a9dbf2abaeefe4704e1ab), uint256(0x29d8717d3f1c097b2f8cd7d3a29345a22b8adbd7f8c653843fba32592f9e3ae6));
         vk.beta = Pairing.G2Point([uint256(0x1ed7926495146c4086ece14b6a59d32500183fac4464cdc76c0c9077ae563f4d), uint256(0x12249c33f6f0b4ea9fbec9d89f01e1b9789d897d4459a46f79f40d7d66c2ffd8)], [uint256(0x1fbb5090a16e8d0a1fcd2853436ecc3ab52bc6b65851d575fb3e51d678e265e2), uint256(0x032752c1cf091d7aa35d6dd417b4b58d1bcf2349da282bc8f8ee9c44c525c67f)]);
@@ -633,6 +666,15 @@ contract Cert_ZK_Proof_SC {
         vk.gamma_abc[6] = Pairing.G1Point(uint256(0x0206809311c9b3f350ce537d3a49a36c74629a763225262ec0df4e9b07863619), uint256(0x02a59609193f095d2636c3e01e344d8e0a4e13505fbb9868c8aab615a3eef7a9));
         vk.gamma_abc[7] = Pairing.G1Point(uint256(0x2e335f9b7225bf7b0f3997905f7582bf7dbb44d4fc0bd2734ade52267d61adb5), uint256(0x1c6d941468fd79fd7e544270761b0d85de4ef4cb5a401a1ac39173c50678a8d1));
     }
+    
+    
+    
+ //###################################################################################
+ //Pairing.addition() is equivalent to EIP196.addition() 
+ //Pairing.scalar_mul() is equivalent to EIP196.scalar_mul()
+ //Pairing.pairingProd4() is equivalent to EIP197.Pairing()
+ //Pairing.negate()  is equivalent to -()
+ //###################################################################################  
     function verify(uint[] memory input, Proof memory proof) internal view returns (uint) {
         uint256 snark_scalar_field = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
         VerifyingKey memory vk = verifyingKey();
@@ -651,6 +693,11 @@ contract Cert_ZK_Proof_SC {
              Pairing.negate(vk.alpha), vk.beta)) return 1;
         return 0;
     }
+    
+    
+ //***********************************************************************
+ //Algorithm 2 described in our paper
+ //************************************************************************
     function verifyTx(
             Proof memory proof, uint[7] memory input
         ) public view returns (bool r) {
