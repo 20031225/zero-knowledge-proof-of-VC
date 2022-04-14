@@ -1,6 +1,10 @@
 pragma solidity ^0.8.1;
 
-
+//##########################################################################
+//This contract is used to avoid replay attack and malleability attack  of zero-knowledge proof (ZKP), pi={a, b, c, public input}. 
+//This contract will be imported into the contract, Cert_ZK_Proof_SC, and its functions such as set_cert_isused_sc_Status and read_Status
+//are called respectively in Cert_ZK_Proof_SC .
+//##########################################################################
 contract Cert_IsUsed_SC{
     
     mapping(bytes32 => bool) cert_Status;
@@ -21,7 +25,9 @@ contract Cert_IsUsed_SC{
     
     
     
-    
+  //###################################################################################
+ //Set that pi has been used through proof_hash = keccak256(pi.public input)
+ //###################################################################################    
    function set_cert_isused_sc_Status(bytes32 proof_hash) public {
         
         require (legal_SC[msg.sender]==true,"Your identity is illegal");
@@ -30,7 +36,9 @@ contract Cert_IsUsed_SC{
         
         }
 
-       
+   //###################################################################################
+ //read the status of pi to determine whether pi has been used
+ //###################################################################################      
     function  read_Status(bytes32 proof_hash) public returns(bool){
         
         require (legal_SC[msg.sender]==true,"Your identity is illegal");
