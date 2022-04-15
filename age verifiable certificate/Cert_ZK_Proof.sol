@@ -687,9 +687,9 @@ contract Cert_ZK_Proof_SC {
         return 0;
     }
  
- //***********************************************************************
+//######################################
  //Algorithm 2 described in our paper
- //************************************************************************
+ //######################################
     function verifyTx(
             Proof memory proof, uint[7] memory input
         ) public view returns (bool r) {
